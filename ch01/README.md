@@ -131,3 +131,17 @@ Express應用程序是由中間件和路由組成的，它們中的任意一個�
 為了使這些request請求處理函數更加的易用，Express新增了一些細節。例如某一個文件夾發送一個JPEG文件，在Express中，你只需要調用一個sendFile方法。Express擁有很多能夠更容易渲染HTML的功能參數。Express還有很多的功能函數用於是你更容易的解析到來的request請求，比如抓取客戶端的IP地址。
 
 跟之前的特性不一樣，這些便捷性不影響你如何組織你的應用程序，但它們真的超級有用。
+
+## Express生態環境
+
+Express存活於Node.js生態環境中，所以你有大量的第三方模塊可以幫助你，比如資料庫接口。因為Express是可擴展的，很多的開發者製作了Express(而不是傳統的Node.js)上的第三方模塊，例如專門的中間件或者用於動態渲染的HTML方法。
+
+### Express跟其他框架相比
+
+Express可能他的競爭對手就是**Hapi.js**了，一個擁有路由與中間件式函數，極其自由的，極其簡潔的框架。它不同於Express，因為它的意圖不是平滑化Node.js的內置HTTP服務模塊，而是建立一個截然不同的結構體系。它是一個十分成熟的框架，被Mozilla、OpenTable以及npm倉庫使用。
+
+同樣，世界上有很多大型的Node.js框架，也許最流行的是全棧式的**Meteor**。Express應用程序的開發方式是極其自由的，但Meteor則擁有一個嚴格固定的結構。Express只處理HTTP服務層；Meteor是全棧式的，代碼同時運行在客戶端與伺服器。
+
+跟Express在原生Node.js上增加新特性的方式相同，有些人也已經在Express添加了新的特性。PayPal創造了Kraken；儘管Kraken技術上只是Express中間件，但它在你的應用程序中做了很多事情。從默認安全到綁定中間件。Sails.js是另外一個建立在Express之上有前途的框架，它添加了資料庫、WebSocket一體化、API生成器、一個資源流水線以及更多。這些框架都是Express的固定化設計。
+
+Express有幾個特點，其中一個就是中間件。Connect是一個Node.js的web應用程序框架並且僅僅是中間件層。Connect沒有路由或便捷函數；它僅僅只是中間件。Express使用過Connect作為中間件層，雖然它現在沒有使用Connect，Express中間件完全兼容Connect中間件。意味著任何中間件可以在Connect中像在Express中一樣工作，
