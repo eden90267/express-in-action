@@ -1,0 +1,9 @@
+{
+  "name": "my-fun-project",
+  "author": "eden90267",
+  "private": true,
+  "version": "0.2.0",
+  "dependencies": {
+    "mustache": "^2.3.0"
+  }
+}
