@@ -144,4 +144,66 @@ Express可能他的競爭對手就是**Hapi.js**了，一個擁有路由與中�
 
 跟Express在原生Node.js上增加新特性的方式相同，有些人也已經在Express添加了新的特性。PayPal創造了Kraken；儘管Kraken技術上只是Express中間件，但它在你的應用程序中做了很多事情。從默認安全到綁定中間件。Sails.js是另外一個建立在Express之上有前途的框架，它添加了資料庫、WebSocket一體化、API生成器、一個資源流水線以及更多。這些框架都是Express的固定化設計。
 
-Express有幾個特點，其中一個就是中間件。Connect是一個Node.js的web應用程序框架並且僅僅是中間件層。Connect沒有路由或便捷函數；它僅僅只是中間件。Express使用過Connect作為中間件層，雖然它現在沒有使用Connect，Express中間件完全兼容Connect中間件。意味著任何中間件可以在Connect中像在Express中一樣工作，
+Express有幾個特點，其中一個就是中間件。Connect是一個Node.js的web應用程序框架並且僅僅是中間件層。Connect沒有路由或便捷函數；它僅僅只是中間件。Express使用過Connect作為中間件層，雖然它現在沒有使用Connect，Express中間件完全兼容Connect中間件。意味著任何中間件可以在Connect中像在Express中一樣工作，這將給你的武器庫中添加大量有用的第三方模組。
+
+Express很多靈感來自於Sinatra，一個Ruby世界的小型web應用程序框架。Sinatra跟Express十分相似，它擁有路由和類中間件函數。Sinatra的思想被大量的借鑑並且也被用很多別的語言重寫。Express同樣類似於Python世界的Bottle以及Flask。
+
+Express不像Python的Django或Ruby的Rails或ASP.NET再或者Java的Play；它們都十分廣大，更加固定的框架模式以及更多特性。Express同樣不像PHP；雖然它的代碼運行在Server，但並不像vanilla PHP一樣跟html緊耦合。
+
+Express僅僅只是多種編寫server site web應用程序中的一種方式。它真正的優勢是別的框架所沒有的，正如Node.js的性能和JavaScript的無處不在，但它同比別的大型框架做的很少，並且有些人會認為JavaScript在這裡並不是最好的語言。但我們可以爭論什麼是最好的但永遠不會有答案，不過重要的是了解Express的應用場景。
+
+### Express的應用場景
+
+理論上來說，Express可以用在任何web應用程序。它可以在程序中處理即將到來的request和response，所以它能夠做到你在大多數之前提到的框架中能做到的事情。但為什麼要選擇Express?
+
+在Node.js中編寫代碼的一個好處JavaScript代碼可以在瀏覽器和伺服器之間共享。這從編代碼的角度上來考慮是十分有用的，因為你可以在client site與Server site上運行相同的代碼。從心理的角度來說這同樣也是很有幫助的。意味著一個前端開發者，可以不用另外學習全新語言，語法情況下編寫後端代碼。
+
+人們想出一個很棒的名字來組織JavaScript全棧：MEAN技術棧(MongoDB+Express+Angular.js+Node.js)。一個全部由JavaScript組成的技術棧可以享受前面所提及的所有好處。
+
+Express時常被用於驅動單頁應用程序(SPA)。SPA在前端是重JavaScript的，它時常需要一個Server組件。這個Server往往要提供簡單的HTML、CSS以及JavaScript，但是一般都是REST API。Express可以把這兩件事情都做得相當的好；它擅長提供HTML和其他的文件，也擅長構建API。由於它的學習曲線對前端開發者來說是十分低的，所以它們不用學習太多的新東西就可以驅動簡單的SPA服務。
+
+當你用Express編寫一個應用程序，你不能脫離Node.js，所以你就有了MEAN技術棧裡的E和N部分，但是其餘的兩部分(M和A)完全可以由你決定，因為Express框架並沒有約束你。
+
+Express同時還是用於一些**實時**的特性。雖然其他的編成環境支持實時的特性，如WebSocket和WebRTC，但同比其他的語言和框架Node.js似乎獲得更多。這就意味你可以在Express應用程序中使用這些特性；因為Node.js擁有的，Express同樣也擁有。
+
+### Node.js和Express的第三方模組
+
+Express有大量的第三方模組。本書涵蓋超過一半的時間如何把第三方模組集成到Express中。
+
+Express擁有一些渲染HTML的小特性，但並沒有附帶任何的模板語言，不過你將看到任何基於Node.js的模板引擎都可以很好的在Express中發揮。很多流行的模板已被Express支持，但其他的則需要一個簡單的幫助庫。本書會看到兩個選擇：EJS(很像HTML的)和Pug(試圖通過全新語法修正HTML的)。
+
+Express沒有任何資料庫的概念，你可以選擇你的應用程序資料如何存放：文件、關聯資料庫，或任何其他的存儲機制。本書選擇流行的MongoDB。
+
+用戶通常想要它們的應用程序變得安全。有許多有幫助的庫和模組(一些原生Node.js的和一些Express的)可以拉緊你Express應用程序的皮帶。ch10會提到。我們同樣也會討論如何測試Express代碼的正確性來確保應用程序的健壯性。
+
+## HelloWorld
+
+```
+var express = require('express'); // 引入Express並存入一個變量
+
+var app = express(); // 調用express()並將新的Express應用程序放到變量app中
+
+// 發送"Hello, World!"
+app.get('/app', function (request, response) {
+    response.send('Hello, world!');
+});
+
+// 在3000端口啟動Express服務，並打印它已經啟動
+app.listen(3000, function () {
+    console.log('Express ap started on port 3000.');
+});
+```
+
+## 小結
+
+Node.js是一個編寫web應用程序的強而有力工具，但是它可能在編寫的時候很複雜。Express**平滑**的消除了這一過程。
+
+Express框架很小，也不墨守成規，這是十分靈活的。
+
+Express擁有幾個關鍵特性：
+
+- **中間件**一種將你應用程序拆分為小模塊的特性。通常，中間件的調用是一個接著一個的，且有排序的。
+- **路由**也是類似的，它也會將你的應用程序分成很小的功能塊，當用戶訪問了**特定的資源**它就會執行
+- 路由可以更進一步的把大型應用程序拆分為小的**子應用**來組成。
+
+在你的Express代碼中，很多都涉及到了request請求處理函數的編寫，並且Express添加了很多的**便捷函數**來幫助你編寫他們。
