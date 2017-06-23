@@ -208,3 +208,58 @@ console.log("Hello world!");
 因讀取文件採用的是非同步方式，你將看到文件結果之前先看到"Hello World!"。造成這樣是因為外部資源──文件系統──還沒有返回給你。
 
 這就是Node非同步模型超級有用的原因。當一個外部資源在處理事情的時候，你可以繼續運行別的代碼。在web應用程序的環境中，這意味著你可以在同一時間解析更多的請求。
+
+## 用Node建立一個web server：http模組
+
+http內置模組對Express十分重要。這個模組使得你用Node開發web成為可能，Express是基於它的。
+
+Node的http模組擁有很多的特性(比如，向其他server提出請求)不過我們將使用它的HTTP服務組件：一個叫做`http.createServer`的函數。這個函數需要一個回呼，它會在**每次請求到來的時候調用**，並且**返回一個server對象**。
+
+*myserver.js*：
+
+```
+var http = require('http');
+
+// 定義一個函數用來處理即將到來的HTTP請求
+function requestHandler(req, res) {
+    console.log('In comes a request to: ' + req.url);
+    res.end('Hello, world!');
+}
+
+var server = http.createServer(requestHandler); // 創建一個server，並用你的函數去處理請求
+
+server.listen(3000); // 啟動server並監聽3000端口
+```
+
+請求處理函數接收兩個參數：request對象還有response對象。request對象有一些項目，如瀏覽器請求URL(他們是否訪問了主頁或者關於頁)，或是瀏覽頁面的瀏覽器類型(被稱為user-agent)，再或者其他類似的項。你可在response對象上調用方法或者Node將打包字節並將他們透過網絡發送。
+
+注意請求URL並不包含“localhost:3000”。這可能有點不直觀，但是其實這是十分有用的。它允許你在任何地方部署你的應用，從你的本地server到你最喜歡的.com地址。它的工作將沒有任何變化。
+
+你可想像解析請求URL。你可能會做一些事情正如接下來的代碼清單。
+
+```
+// 透過一個請求處理函數解析請求URL
+function requestHandler(req, res) {
+    if (req.url === '/') {
+        res.end('Welcome to the homepage!');
+    } else if (req.url === '/about') {
+        res.end('Welcome to the about page!');
+    } else {
+        res.end('Error! File not found');
+    }
+}
+```
+
+你可想像用這一個請求處理函數來構建你的整個站點。對於很小的站點，這可能很簡單，但你可以看到這個函數很快會變得巨大並且笨重。你可能想要一個框架來幫助你清理HTTP Server —— 這就是Express出現的原因。
+
+## 總結
+
+安裝Node。建議使用版本管理器。可輕鬆切換版本並按須更新。
+
+Node模組系統利用一個叫`require`的全局函數和一個叫做`module.exports`的全局對象。他們兩個組成了簡單的模組系統。
+
+你可使用npm從npm倉庫安裝第三包。
+
+Node有事件I/O。這就意味著當一個事件發生(比如傳入web請求)，一個函數(或函數集)被調用。
+
+Node有一個內置模組http。它對構建web應用程序很有用。
