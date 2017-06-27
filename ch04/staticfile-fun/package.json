@@ -1,0 +1,7 @@
+{
+  "name": "staticfile-fun",
+  "private": true,
+  "scripts": {
+    "start": "node app"
+  }
+}
