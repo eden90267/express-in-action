@@ -29,6 +29,14 @@ app.use(function (req, res, next) {
     });
 });
 
+// 我們去掉了參數next，因為你用不到它
+app.use(function (req, res) {
+    // 設置狀態碼為404
+    res.status(404);
+    // 發送錯誤提示
+    res.send('File not found!');
+});
+
 app.listen(3000, function () {
     console.log('App started on port 3000');
 });
