@@ -19,6 +19,7 @@
     <option es3="false" />
     <option es5="false" />
     <option esnext="false" />
+    <option esversion="6" />
     <option evil="false" />
     <option expr="false" />
     <option forin="true" />

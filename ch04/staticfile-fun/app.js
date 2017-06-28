@@ -6,28 +6,14 @@ var express = require('express');
 var path = require('path');
 var fs = require('fs');
 
+var morgan = require('morgan');
+
 var app = express();
 
-app.use(function (req, res, next) {
-    console.log('Request IP：' + req.url);
-    console.log('Request date：' + new Date());
-    next(); // 這行很重要
-});
+app.use(morgan('short'));
 
-app.use(function (req, res, next) {
-    var filePath = path.join(__dirname, "static", req.url);
-    fs.stat(filePath, function (err, fileInfo) {
-        if (err) {
-            return next();
-        }
-        if (fileInfo.isFile()) {
-            res.sendFile(filePath);
-        } else {
-            // 不存在則調用下一個中間件
-            next();
-        }
-    });
-});
+var staticPath = path.join(__dirname, 'static');
+app.use(express.static(staticPath)); // 使用express.static從靜態路徑提供服務
 
 // 我們去掉了參數next，因為你用不到它
 app.use(function (req, res) {
