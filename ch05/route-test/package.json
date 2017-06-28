@@ -1,0 +1,10 @@
+{
+  "name": "route-test",
+  "version": "1.0.",
+  "scripts": {
+    "start": "nodemon app.js"
+  },
+  "dependencies": {
+    "express": "^4.15.3"
+  }
+}
