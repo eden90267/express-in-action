@@ -1,16 +1,15 @@
+
 const express = require('express');
+const path = require('path');
+
+const apiRouter = require('./routes/api_router');
 
 const app = express();
 
-app.get('/olivia', (req, res) => res.send(`Welcome to Olivia's homepage!`));
+const STATIC_PATH = path.resolve(__dirname, "static");
+app.use(express.static(STATIC_PATH));
 
-// 匹配傳入的請求，如：/users/123，/users/horse_ebooks
-app.get('/users/:userid', (req, res) => {
-    // 將userId轉換為整數
-    let userId = parseInt(req.params.userid, 10);
-    // ...
-});
-
-app.use((req, res) => res.status(404).send('Page not found!'));
+// 使用你自己的Router
+app.use('/api', apiRouter);
 
 app.listen(3000);
