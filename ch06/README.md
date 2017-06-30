@@ -114,5 +114,32 @@ HTTP並不具備記憶能力，雖然你不能用它定義任何你想要的方�
 下個代碼清單中將包含一個用簡短信息回復每個不同動詞的簡單應用程序：
 
 ```
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => res.send('you just send a GET request, friend'));
+
+app.post('/', (req, res) => res.send('a POST request? nice'));
+
+app.put('/', (req, res) => res.send("i don't see a lot of PUT requests anymore"));
+
+app.delete('/', (req, res) => res.send('oh my, a DELETE??'));
+
+app.listen(3000, () => console.log('App is listening on port 3000'));
+```
 
 ```
+$ curl http://localhost:3000
+you just send a GET request, friend
+
+$ curl -X POST http://localhost:3000
+a POST request? nice
+
+$ curl -X PUT http://localhost:3000
+i don't see a lot of PUT requests anymore
+
+$ curl -X DELETE http://localhost:3000
+oh my, a DELETE??
+```
+
+### 透過HTTP方法構建的CRUD程序
