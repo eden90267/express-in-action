@@ -91,3 +91,22 @@ app.listen(3000);
 8. 在渲染視圖的時候，將會透過Express中的一行代碼調用視圖引擎。這裡會接管視圖引擎並且產生真實的HTML。
 
 這有點麻煩，但是99%的情況下都會選好一個視圖引擎並且一直使用它，所以你可能會免受這種複雜情況的困擾。
+
+>**渲染非HTML視圖**
+>
+>Express的默認內容類型是HTML，如果你沒有做任何別的事情，res.render將渲染你的響應，然後把它們作為HTML發送給客戶端。大多數情況下，我覺得已經足夠。但它並不一定會是這種形式。你可以渲染純文本、XML、JSON，或者任何你需要的。只要透過改變參數res.type的內容類型就可以了：
+>
+>```
+>app.get('/', (req, res) => {
+>  res.type('text');
+>  res.render('myview', {
+>    currentUser: 'Gilligan',
+>  });
+>});
+>```
+>
+>有更加好的方式來渲染這些東西──res.json，例如，應該用來替代視圖渲染JSON──但這也是另一個實現方式。
+
+### 讓所有的視圖都能兼容Express：Consolidate.js
+
+有大量的視圖可做選擇。Mustache、Handlebars，或者Underscore.js的模板
