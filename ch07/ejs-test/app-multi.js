@@ -10,7 +10,7 @@ var app = require('express')();
 app.locals.appName = 'Song Lyrics';
 
 app.set('view engine', 'jade');
-app.set('view', path.resolve(__dirname, 'views'));
+app.set('views', path.resolve(__dirname, 'views'));
 app.engine('html', ejs.renderFile);
 
 app.use((req, res, next) => {
