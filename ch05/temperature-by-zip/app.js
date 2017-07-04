@@ -14,7 +14,7 @@ let weather = new ForecastIo('fab43854133d52d7ab2718c7cd06b3d6');
 app.use(express.static(path.resolve(__dirname, 'public')));
 
 app.set('views', path.resolve(__dirname, 'views'));
-app.set('view engine', 'ejs');
+app.set('view engine', 'ejs-test');
 
 app.get('/', (req, res) => res.render('index'));
 
