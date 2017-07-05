@@ -15,4 +15,13 @@ app.get('/', (req, res) => {
     res.render('index');
 });
 
+app.get('/test1', (req, res) => {
+    res.render('test1', {
+        name: 'Tony Hawk',
+        birthyear: 1968,
+        career: 'skateboarding',
+        bio: '<b>Tony Hawk</b> is the coolest skateboarder around.'
+    });
+});
+
 app.listen(3000);

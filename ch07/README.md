@@ -109,4 +109,196 @@ app.listen(3000);
 
 ### 讓所有的視圖都能兼容Express：Consolidate.js
 
-有大量的視圖可做選擇。Mustache、Handlebars，或者Underscore.js的模板
+有大量的視圖可做選擇。Mustache、Handlebars，或者Underscore.js的模板。你可能還想使用那些，移植到Node的諸如Jinja2或者HAML，這樣別的編程語言的模板。
+
+EJS和Pug這樣的視圖引擎，能在Express中工作良好。其他視圖引擎並沒有適配Express API，它們需要包裏一些代碼，從而使得Express能夠理解它們。
+
+進入Consolidate.js([https://github.com/tj/consolidate.js](https://github.com/tj/consolidate.js))，一個能夠包裝大量視圖引擎來適配Express的庫。它支持經典的EJS、Pug、Mustache、Handlebars，和Hogan。它同樣也支持大量其他的。
+
+假設你正使用Walrus。你將需要使用Consolidate來讓他適配Express。
+
+```
+npm i walrus consolidate --save
+```
+
+*app.js*：
+
+```
+const engines = require('consolidate');
+const path = require('path');
+
+const app = require('express')();
+
+// 指定.wal文件作為你的文件後綴
+app.set('view engine', 'wal');
+// 將.wal文件綁定Walrus視圖引擎
+app.engine('wal', engines.walrus);
+// 指定你的視圖目錄
+app.set('views', path.resolve(__dirname, 'views'));
+
+// 渲染views/index.wal
+app.get('/', (req, res) => {
+    res.render('index');
+});
+
+app.listen(3000);
+```
+
+## EJS中你必須要了解的東西
+
+EJS(Embedded JavaScript)是最簡單，最受歡迎的視圖引擎之一。它可為簡單的字符串、HTML、純文本做模版 —— 由你指定。不管你使用任何工具都能輕鬆集成它。它工作在browser和Node中。
+
+>Express版本要選：TJ Holowaychunk維護的版本。
+
+### EJS語法
+
+EJS可以用做HTML的模板，除此之外它還可以用於任何東西。
+
+*test1.ejs*：
+
+```
+Hi <%= name %>!
+You were born in <%= birthyear %>, so that means you're <%= (new Date()).getFullYear() - birthyear %> years old.
+<% if(career) { -%>
+<%=: career || capitalize %> is a cool career!
+<% } else { -%>
+Haven't started a career yet? That's cool.
+<% } -%>
+oh, let's read your bio: <%- bio %> See you later!
+```
+
+將下面內容傳入EJS：
+
+```
+{
+    name: 'Tony Hawk',
+    birthyear: 1968,
+    career: 'skateboarding',
+    bio: '<b>Tony Hawk</b> is the coolest skateboarder around.'
+}
+```
+
+你將會返回這樣結果：
+
+```
+
+Hi Tony Hawk!
+You were born in 1968, so that means you're 49 years old.
+Skateboarding is a cool career!
+oh, let's read your bio: <b>Tony Hawk</b> is the coolest skateboarder around. See you later!
+```
+
+這個小例子展示了EJS的四個特性：JavaScript取值(evaluated)、轉譯(escaped)以及打印(printed)；JavaScript取值但不打印；JavaScript取值並打印(但是不脫離HTML)；以及過濾。
+
+可使用兩種方式打印JavaScript表達式的結果：
+
+- `<% expression %>`：打印expression的結果
+- `<%- expression %>`：打印expression的結果並轉譯任何內部的HTML條目。(推薦，更加安全)
+
+你同樣可運行任意數量的JavaScript，並防止它被打印出來，這種特性對於循環和條件判斷很有用。它使用了`<% expression %>`。你可使用<% expression -%>來避免增加多餘的換行。
+
+添加一個冒號(:)到輸出將會啟用過濾器。過濾器傳入一個表達式給輸出，並且它會改變輸出結果。例子是首字母大寫的過濾器。
+
+>想玩EJS：[https://evanhahn.github.io/try-EJS/](https://evanhahn.github.io/try-EJS/)
+
+在你自己的EJS頁面包含(include)其他模板：
+
+*header.ejs*：
+
+```
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="/the.css">
+    <title><%= appTitle %>/title>
+</head>
+<body>
+    <header>
+        <h1><%= appTitle %></h1>
+    </header>
+```
+
+*footer.ejs*：
+
+```
+<footer>
+    All content copyright <%= new Date().getFullYear() %> <%= appName %>.
+</footer>
+</body>
+</html>
+```
+
+*index.ejs*：
+
+```
+<% include header %>
+<h1>Welcome to my page!</h1>
+<p>This is a pretty cool page, I must say.</p>
+<% include footer %>
+```
+
+你同樣可以想像用它來構建一個組件。假設你有一個展示用戶檔案的組件。提供你一個名為user的對象，模板將會產出這個用戶的HTML。
+
+*userwidget.ejs*：
+
+```
+<div class="user-widget">
+    <img src="<%= user.profilePicture %>">
+    <div class="user-name"><%= user.name %></div>
+    <div class="user-bio"><%= user.bio %></div>
+</div>
+```
+
+現在你可以在渲染當前用戶的時候使用這個模板了
+
+```
+<% user = currentUser %>
+<% include userwidget %>
+```
+
+或者你可以在渲染用戶列表的時候使用它
+
+```
+<% userList.forEach(function(user) { %>
+  <% include userwidget %>
+<% } %>
+```
+
+EJS的include是多功能的；它可以用來構建模板或者多次渲染子視圖。
+
+#### 添加你自己的過濾器
+
+有22個內置的過濾器，從數字操作到陣列/字符串逆轉排序。它們通常能夠滿足你的需求，但有些時候你想要添加你自己的過濾器。
+
+假設你已經將EJS引入到一個名為ejs變量中，你可簡單的添加一個屬性到`ejs.filters`。如果你頻繁地進行陣列求合，你會發現編寫一個你自定義的陣列求和過濾器十分有用。
+
+```
+ejs.filter.sum = function(arr) {
+  var result = 0;
+  for (var i = 0; i < arr.length; i++) {
+    result += arr[i];
+  }
+  return result;
+}
+```
+
+現在你可以像使用其他過濾器一樣使用它了。
+
+```
+<%= myarray | sum %>
+```
+
+十分簡單。你可以設計出大量的過濾器 — — 當你需要的時候編寫它們。
+
+## Pug中你必須要了解的東西
+
+像Handlebars、Mustache，以及EJS這樣的視圖引擎並沒有完全的替換HTML — — 它們添加了新功能。
+
+Pug提供了其他特性。它允許你編寫更少行的代碼，並且你編寫的每一行代碼會更加漂亮。文檔類型的書寫變得很容易；標籤嵌套縮進，不用閉合。它有大量EJS風格的特性內置在語言中，例如判斷和循環。會有很多更強力的東西需要學。
+
+### Pug語法
+
+```
+
+```
