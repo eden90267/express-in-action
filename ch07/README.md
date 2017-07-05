@@ -299,6 +299,94 @@ Pug提供了其他特性。它允許你編寫更少行的代碼，並且你編�
 
 ### Pug語法
 
-```
+*hello-world.pug*：
 
 ```
+doctype html
+html(lang="en")
+    head
+        title Hello world!
+    body
+        h1 This is a Pug example
+        #container
+            p Wow.
+```
+
+*app.js*：
+
+```
+const app = require('express')();
+
+app.set('view engine', 'pug');
+app.set('views', require('path').resolve(__dirname, 'views'));
+
+app.get('/hello-world', (req, res) => res.render('hello-world'));
+
+app.listen(3000);
+```
+
+### Pug的布局
+
+布局是所有模板語言的一個重要特性。它們允許你包括一個表單或另一個其他的HTML。它使得你定義一次header和footer，然後在你需要它們的時候將它們引入到頁面。
+
+第一步，定義一個主布局，主布局定義一個block並將它填入到所有使用它的頁面：
+
+```
+doctype html
+html
+    head
+        meta(charset="utf-8")
+        title Cute Animals website
+        link(rel="stylesheet" href="the.css")
+        block header
+    body
+        h1 Cute Animals website
+        block body
+```
+
+注意到你透過block header和block body定義兩個塊。它們將會把使用到的其他Pug文件填充到布局。
+
+```
+extends layout
+block body
+    p Welcome to my cute animals page!
+```
+
+可定義其他頁面，輕鬆使用這個布局：
+
+```
+extends layout
+block body
+    p This is another page using this layout.
+    img(src="cute_dog.jpg" alt="A cute dog!")
+    p Isn't that a cute dog!
+```
+
+布局使你分離出常規的組件，這也意味你不用反覆編寫同樣的代碼。
+
+### 混入Pug
+
+Pug還有一種被稱為混入的酷炫特性，這是你在Pug文件中定義的功能，用於削減重複的任務。
+
+```
+mixin user-widget(user)
+    .user-widget
+        img(src=user.profilePicture)
+        .user-name= user.name
+        .user-bio= user.bio
+
+extends layout
+block body
+    +user-widget(currentUser)
+
+    - each user in userList
+        +user-widget(user)
+```
+
+## 總結
+
+Express擁有一個用於動態渲染HTML頁面的視圖系統。你傳入變量調用`res.render`來動態渲染視圖。在這之前，你必須給Express配置正確的視圖引擎和正確的視圖文件夾。
+
+EJS模板語言是在HTML之上的一層包裝層，它添加了透過JavaScript動態生成HTML的能力。
+
+模板語言Pug重朔了HTML，它使你透過全新的語言渲染HTML。它的目的是消除冗長的編碼。

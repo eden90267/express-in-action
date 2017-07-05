@@ -1,0 +1,15 @@
+//
+   Created by eden_liu on 2017/7/5.
+
+mixin user-widget(user)
+    .user-widget
+        img(src=user.profilePicture)
+        .user-name= user.name
+        .user-bio= user.bio
+
+extends layout
+block body
+    +user-widget(currentUser)
+
+    - each user in userList
+        +user-widget(user)
