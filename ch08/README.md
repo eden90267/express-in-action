@@ -154,5 +154,296 @@ var userSchema = mongoose.Schema({
 一旦你創建了帶有這些屬性的模式，你就可以添加方法了。第一個方法，獲取用戶的名字。
 
 ```
+userSchema.methods.name = () => {
+    return this.displayName || this.username;
+};
+```
+
+密碼儲存要確保安全，使用bcrypt程序來應用單向散列Hash。Bcrypt透過多次運行部分算法來為你提供一個安全的散列，不過運行次數是可配置的。數值越大，它的安全性就越強但相應的獲取時間也會變長。正如下面的代碼清單所示，你把數值設為10，可增加數值來獲取更高的安全性。
 
 ```
+const bcrypt = require('bcrypt-nodejs');
+const SALT_FACTOR = 10;
+```
+
+在你定義你的模式後，你將定義預儲存動作。在你模型儲存到資料庫之前，你將運行這些代碼來散列化密碼。
+
+```
+// 一個用於提供給用戶bcrypt的模組空函數
+const noop = function () {
+};
+
+// 定義一在模型保存前運行的函數
+userSchema.pre('save', function (done) {
+    // 儲存當前用戶的引用
+    var user = this;
+    // 如果密碼沒有被修改過的話跳過處理邏輯
+    if (!user.isModified('password')) {
+        return done();
+    }
+    // 根據salt生成對應的散列，一旦完成則調用內部函數
+    bcrypt.genSalt(SALT_FACTOR, function (err, salt) {
+        if (err) return done(err);
+        bcrypt.hash(user.password, salt, noop,
+            // 散列化用戶的密碼
+            function (err, hashedPassword) {
+                if (err) return done(err);
+                // 儲存密碼並繼續進行保存
+                user.password = hashedPassword;
+                done();
+            }
+        );
+    });
+});
+```
+
+它會在你每次將模型保存到Mongo中自動進行。
+
+你需要編寫代碼來對真實密碼和猜測密碼進行比較。當用戶登陸的時候，你將需要確保他們輸入的密碼是正確的。下面的代碼清單在模型中定義了另一簡單的方法來做到這點。
+
+```
+userSchema.methods.checkPassword = function (guess, done) {
+    bcrypt.compare(guess, this.password, function (err, isMatch) {
+        done(err, isMatch);
+    });
+};
+```
+
+現在你已經可以安全儲存你的用戶密碼了。
+
+我們使用`bcrypt.compare`而不是簡單的相等檢查(利用===)。這是出於安全原因──它幫助我們安全的進行比較，從而避開駭客不時的攻擊。
+
+一旦你定義有自己屬性和方法的模式，你就需要將模式附加到實際的模型上了。你只需要一行代碼就能做到這些，由於你要在一個文件中定義用戶模型，你需要確保module.exports暴露它，從而使得其他文件可以require它。
+
+```
+let User = mongoose.model('User', userSchema);
+module.exports = User;
+```
+
+以下是*user.js*全貌：
+
+```
+const mongoose = require('mongoose');
+
+const bcrypt = require('bcrypt-nodejs');
+const SALT_FACTOR = 10;
+
+let userSchema = mongoose.Schema({
+    username: {type: String, require: true, unique: true},
+    password: {type: String, require: true},
+    createdAt: {type: Date, default: Date.now},
+    displayName: String,
+    bio: String
+});
+
+userSchema.methods.name = function() {
+    return this.displayName || this.username;
+};
+
+// 一個用於提供給用戶bcrypt的模組空函數
+const noop = function () {
+};
+
+// 定義一在模型保存前運行的函數
+userSchema.pre('save', function (done) {
+    // 儲存當前用戶的引用
+    var user = this;
+    // 如果密碼沒有被修改過的話跳過處理邏輯
+    if (!user.isModified('password')) {
+        return done();
+    }
+    // 根據salt生成對應的散列，一旦完成則調用內部函數
+    bcrypt.genSalt(SALT_FACTOR, function (err, salt) {
+        if (err) return done(err);
+        bcrypt.hash(user.password, salt, noop,
+            // 散列化用戶的密碼
+            function (err, hashedPassword) {
+                if (err) return done(err);
+                // 儲存密碼並繼續進行保存
+                user.password = hashedPassword;
+                done();
+            }
+        );
+    });
+});
+
+userSchema.methods.checkPassword = function (guess, done) {
+    bcrypt.compare(guess, this.password, function (err, isMatch) {
+        done(err, isMatch);
+    });
+};
+
+let User = mongoose.model('User', userSchema);
+module.exports = User;
+```
+
+### 使用你的模型
+
+*app.js*：
+
+```
+
+const express = require('express');
+const mongoose = require('mongoose');
+const path = require('path');
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const flash = require('connect-flash');
+
+// 把你的路由放到另一個文件
+const routes = require('./routes');
+
+const app = express();
+
+mongoose.connect(require('./credentials').mongo.connectionString);
+
+app.set("port", process.env.PORT || 3000);
+
+app.set("views", path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
+// 使用四個中間件
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(cookieParser());
+app.use(session({
+    secret: 'TKRv0IJs=HYqrvagQ#&!F!%V]Ww/4KiVs$s,<<MX',
+    resave: true,
+    saveUninitialized: true
+}));
+app.use(flash());
+
+app.use(routes);
+
+app.listen(app.get("port"), () => {
+    console.log('Server started on port ' + app.get('port'));
+});
+```
+
+*routes.js*：
+
+```
+
+const express = require('express');
+
+const User = require('./models/user');
+
+const router = express.Router();
+
+router.use((req, res, next) => {
+    // 為你的模板設置幾個有用的變數
+    res.locals.currentUser = req.user;
+    res.locals.errors = req.flash('error');
+    res.locals.infos = req.flash('info');
+    next();
+});
+
+router.get('/', (req, res, next) => {
+    // 查詢用戶集合，並且總是先返回新的用戶
+    User.find()
+        .sort({createdAt: 'descending'})
+        .exec((err, users) => {
+            if (err) return next(err);
+            res.render('index', {users: users});
+        });
+});
+
+module.exports = router;
+```
+
+首先你使用Mongoose的`mongoose.connect`連接到你的Mongo資料庫。
+
+其次，透過`User.find`獲取用戶列表。接著你按照createdAt屬性對這些結果進行排序，再後來你透過exec進行查詢。實際上你並不會在執行exec之前進行查詢。如你所見，你同樣可以在find中指定一個callback來跳過使用exec，但這樣的話你就不能進行排序或者其他類似的事情了。
+
+再來是創建文件了。
+
+`views/_header.ejs`：
+
+```
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Learn About Me</title>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+
+<div class="navbar navbar-default navbar-static-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a href="/" class="navbar-brand">Learn About Me</a>
+        </div>
+        <!--
+        如果用戶已經登陸了則對導航條進行相應的改變。
+        一開始你的代碼中並不存在currentUser，所以總會顯示一個狀態
+        -->
+        <ul class="nav navbar-nav navbar-right">
+            <% if (currentUser) { %>
+            <li><a href="/edit">Hello, <%= currentUser.name() %></a></li>
+            <li><a href="/logout">Log out</a></li>
+            <% } else { %>
+            <li><a href="/login">Log in</a></li>
+            <li><a href="/signup">Sign up</a></li>
+            <% } %>
+        </ul>
+    </div>
+</div>
+<div class="container">
+    <% errors.forEach(function(error) { %>
+    <div class="alert alert-danger" role="alert">
+        <%= error %>
+    </div>
+    <% }); %>
+    <% infos.forEach(function (info) { %>
+    <div class="alert alert-info" role="alert">
+        <%= info %>
+    </div>
+    <% }); %>
+```
+
+不直接渲染的視圖總是起始於下划線。這是約定俗成的。你不會直接渲染header──另一個視圖可能會引入header。
+
+接下來，*_footer.ejs*：
+
+```
+
+</div>
+
+</body>
+</html>
+```
+
+最後，創建index.ejs，這才是真正的主頁。它將在你渲染視圖的時候，接收你傳入的users變量。
+
+```
+<% include _header %>
+
+<h1>Welcome to Learn About Me!</h1>
+
+<% users.forEach(function (user) { %>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <a href="/users/<%= user.username %>">
+            <%= user.name() %>
+        </a>
+    </div>
+    <% if(user.bio) { %>
+    <div class="panel-body"><%= user.bio %></div>
+    <% } %>
+</div>
+
+<% }) %>
+
+<% include _footer %>
+```
+
+代碼保存完畢，啟動你的Mongo Server，執行npm start，然後在你瀏覽器訪問localhost:3000。
