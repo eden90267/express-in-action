@@ -447,3 +447,389 @@ module.exports = router;
 ```
 
 代碼保存完畢，啟動你的Mongo Server，執行npm start，然後在你瀏覽器訪問localhost:3000。
+
+如果沒出現任何錯誤，這是極好的！這意味著你查詢了Mongo資料庫然後在這獲取了所有的用戶 — — 只是恰好這個時候沒有任何用戶而已。
+
+現在給頁面添加兩個路由：一個用於註冊頁，還有一個用於實際登陸。為了使用它們，你需要確保你使用了body-parser中間件來解析資料。
+
+*app.js*：
+
+```
+const bodyParser = require("body-parser");
+// ...
+app.use(bodyParser.urlencoded({ extended: false }));
+// ...
+```
+
+設置body-parser的**extended**參數為**false**從而使得解析更加簡單的同時也更加安全。接下來代碼清單將告訴你如何將sign-up路由添加到routes.js中。
+
+```
+router.get('signup', (req, res) => {
+    res.render('signup');
+});
+
+router.post('/signup',
+    (req, res, next) => {
+        // body-parser把username和password添加到了req.body
+        let username = req.body.username;
+        let password = req.body.password;
+
+        // 調用findOne只返回一個用戶。你想在這批配一個用戶名
+        User.findOne({username: username}, (err, user) => {
+            if (err) return next(err);
+            // 如果你找到一個用戶，你需要保證他的用戶名必須已經存在
+            if (user) {
+                req.flash('error', 'User already exists');
+                return res.redirect('/signup');
+            }
+            // 透過username和password創建一個User模型的實例
+            let newUser = new User({
+                username,
+                password
+            });
+            // 將新的用戶保存到資料庫中，然後繼續到下一個請求處理
+            newUser.save(next);
+        });
+    },
+    // 用戶有效性驗證
+    passport.authenticate('login', {
+        successRedirect: '/',
+        failureRedirect: '/signup',
+        failureFlash: true
+    }));
+```
+
+剛才的代碼有效把你的新用戶保存到資料庫中。接下來透過新建*views/signup.ejs*：
+
+```
+<% include _header %>
+
+<h1>Sign up</h1>
+
+<form action="/signup" method="post">
+    <input name="username" type="text" class="form-control" placeholder="Username" required autofocus>
+    <input name="password" type="password" class="form-control" placeholder="Password" required>
+    <input type="submit" value="Sign up" class="btn btn-primary btn-block">
+</form>
+
+<% include _footer %>
+```
+
+在你編寫登陸和登出前的最後一點事情就是個人檔案的視圖了，*routes.js*：
+
+```
+router.get('/users/:username', (req, res, next) => {
+    User.findOne({username: req.params.username}, (err, user) => {
+        if (err) return next(err);
+        if (!user) return next(404);
+        res.render('profile', {user: user});
+    });
+});
+```
+
+*profile.ejs*：
+
+```
+<% include _header %>
+
+<!--
+參考變數currentUser來判斷你的登錄狀態。不過現在它總會是false狀態
+-->
+<% if ((currentUser) && (currentUser.id === user.id)) { %>
+<a href="/edit" class="pull-right">Edit your profile</a>
+<% } %>
+
+<h1><%= user.name() %></h1>
+<h2>Joined on <%= user.createdAt %></h2>
+
+<% if (user.bio) { %>
+<p><%= user.bio %></p>
+<% } %>
+
+<% include _footer %>
+```
+
+## 透過Passport來進行用戶身份驗證
+
+Passport是Node的身份認證中間件。它被設計出來的目的很純粹：對請求進行身份認證。Passport為你解決了很多頭疼的問題。
+
+Passport並不會指定你如何去對用戶進行身份認證；它只是給你提供了有幫助的模板代碼。這與Express的思想類似。在本章中，我們將學習如何使用Passport對存入Mongo資料庫中的用戶進行身份認證，除此之外，Passport還同樣為Facebook、Google、Twitter，以及超過100多家的公司提供身份認證。它非常的模組化，同時也非常強力！
+
+### 設置Passport
+
+在你設置Passport的時候你需要做三件事情：
+
+1. 設置Passport中間件
+2. 告知Passport如何序列化以及反序列化user。代碼十分簡短，但是卻能有效地將user的session轉換成實際的user對象。
+3. 告知Passport如何認證user。在這例子中，你大部分需要編寫的代碼主要是，告知Passport如何與你的Mongo資料庫交互。
+
+#### 設置Passport中間件
+
+在初始化Passport的時候，你需要設置三個Express官方中間件，一個第三方中間件，以及兩個Passport中間件。
+
+- body-parser — — 解析HTML表單
+- cookie-parser — — 處理從瀏覽器中獲取的cookies，它是用戶session的先決條件
+- express-session — — 跨瀏覽器儲存用戶session
+- connect-flash — — 展示錯誤訊息
+- passport.initialize — — 初始化Passport模組
+- passport.session — — 處理Passport的session
+
+*app.js*：
+
+```
+
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const flash = require('connect-flash');
+const passport = require('passport');
+
+// ...
+
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(cookieParser());
+app.use(session({
+    // 需要一串隨機字母序列
+    secret: 'TKRv0IJs=HYqrvagQ#&!F!%V]Ww/4KiVs$s,<<MX',
+    resave: true,
+    saveUninitialized: true
+}));
+app.use(flash());
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// ...
+```
+
+你將三個參數傳入到express-session：
+
+- secret：允許你對所有客戶端傳來的session進行編碼。它能阻礙駭客破解你的用戶cookies。正如你發現的，它需要一串隨機字母序列
+- resave：是這個中間件的必填選項。當它被設置為true，即使session沒有被修改也依然被刷新
+- saveUninitialized：是另一個必填選項。它會重置未初始化的session
+
+一旦你把他們設置完畢，你將可以準備開始下一步了：告知Passport如何從session中提取用戶。
+
+#### 序列化及反序列化User
+
+Passport需要知道如何序列化和反序列化。你需要將user的session轉換為一個實際的user對象。反之亦然。
+
+>在一個標準的web應用程序中，只有發送登陸請求的時候，才對用戶進行身份認證。如果身份認證成功，將會建立一個session，並透過設置用戶瀏覽器中的cookie來對它進行維護。  
+>任何後續的請求並不會包含認證信息，但取而代之的是，唯一的cookie指定了session。為了提供登入session，Passport將會從session中序列化和反序列化user實體。
+
+為分離你的代碼，你需要定義一個名為*setuppassport.js*的新文件。這個文件將會導出一個單一的函數，用來設置Passport的東西。創建*setuppassport.js*並把它引入*app.js*：
+
+```
+// ...
+const setUpPassport = require('./setuppassport');
+// ...
+const app = express();
+
+mongoose.connect(require('./credentials').mongo.connectionString);
+
+setUpPassport();
+// ...
+```
+
+現在，你可以編寫你的Passport設置了。
+
+因為所有的user模型都有一個唯一的_id屬性，你將使用它來作為憑證。告知Passport如何從用戶ID序列化和反序列化用戶：
+
+```
+const passport = require('passport');
+const User = require('./models/user');
+
+module.exports = () => {
+
+    // serializeUser可以將一個user對象轉換為ID。
+    // 不傳入錯誤，並傳入一個user對象調用done
+    passport.serializeUser((user, done) => {
+        done(null, user._id);
+    });
+
+    // deserializeUser可以將用戶ID轉換為user對象。
+    // 一旦完成轉換，你需要傳入錯誤和用戶對象來調用done
+    passport.deserializeUser((id, done) => {
+        User.findById(id, (err, user) => {
+            done(err, user);
+        });
+    });
+
+};
+```
+
+現在，一旦session處理完畢，我們就可以處理最難的部分了：實際認證。
+
+#### 實際認證
+
+Passport最後一部分是設置策略(strategy)。一些策略包括如Facebook或Google網站身份驗證；你將要使用到的策略是local strategy。簡單說，這意味著身份認證是由你而定的，也就是說你必須寫一點點Mongoose代碼。
+
+首先，引入Passport本地策略到一個名為LocalStrategy變數中(*setuppassport.js*)：
+
+```
+// ...
+const LocalStrategy = require('passport-local').Strategy;
+// ...
+```
+
+接下來，告訴Passport如何使用本地策略。你的身份認證代碼將經過下面幾步：
+
+1. 用提供的用戶名來查找用戶
+2. 如果用戶不存在，那麼你的用戶將不能通過身份認證；假設你會被以告知消息“不存在擁有這個用戶名的用戶”而結束。
+3. 如果用戶存在，用你提供的密碼與真正的密碼進行比對。如果密碼匹配成功，則返回當前用戶。如果匹配失敗，返回“密碼錯誤”。
+
+*setuppassport.js*：
+
+```
+// 告訴Passport使用本地策略
+passport.use('login', new LocalStrategy((username, password, done) => {
+    User.findOne({username}, (err, user) => {
+        if (err) return done(err);
+        if (!user) return done(null, false, {message: 'No user has that username!'});
+
+        user.checkPassword(password, (err, isMatch) => {
+            if (err) return done(err);
+            if (isMatch) {
+                return done(null, user);
+            } else {
+                return done(null, false, {message: 'Invalid password.'});
+            }
+        });
+    });
+}));
+```
+
+如你所見，你實例化一個LocalStrategy。一旦你這麼做，你可以在任何你想要完成的時候調用`done`回調！如果找到了那麼你將返回user對象，否則將返回false。
+
+#### 路由和視圖
+
+最後，你需要設置余下的視圖。你也需要這些：
+
+1. 登陸
+2. 登出
+3. 個人信息編輯(在你登入之後)
+
+登入，*routes.js*：
+
+```
+// ...
+router.get('/login', (req, res) => {
+    res.render('login');
+});
+// ...
+```
+
+*login.ejs*：
+
+```
+<% include _header %>
+
+<form action="/login" method="post">
+    <input name="username" type="text" class="form-control" placeholder="Username" required autofocus>
+    <input name="password" type="text" class="form-control" placeholder="Passport" required>
+    <input type="submit" value="Log in" class="btn btn-primary btn-block">
+</form>
+
+<% include _footer %>
+```
+
+接下來，你為POST /login定義處理程序，我們將用它來處理Passport的身份認證。*routes.js*：
+
+```
+router.post('/login', passport.authenticate('login', {
+    successRedirect: '/',
+    failureRedirect: '/login',
+    // 如果登入失敗則透過connect-flash設置錯誤訊息
+    failureFlash: true,
+}));
+```
+
+`passport.authenticate`返回一個請求處理函數，這個函數式傳遞過來的並不需要你自己編寫。它根據用戶是否成功登入來使你重定向到正確的位置。
+
+登出對Passport來說同樣是信手沾來的。你唯一要做的就是調用req.logout，這一個被添加到Passport的新函數：
+
+```
+router.get('/logout', (req, res) => {
+    req.logout();
+    res.redirect('/');
+});
+```
+
+Passport附加了req.user並且connect-flash將附加一些flash值。你前面添加了以下代碼，但現在看看他，應該會好的理解：
+
+```
+router.use((req, res, next) => {
+    // 為你的模板設置幾個有用的變數
+    res.locals.currentUser = req.user;
+    res.locals.errors = req.flash('error');
+    res.locals.infos = req.flash('info');
+    next();
+});
+```
+
+現在你可以登入登出了。現在剩下編輯頁。
+
+接下來，我們編寫一些工具中間件，用來確保user可以被身份認證。但是你無法使用這個中間件；你僅僅是定義它以便其他的路由可以使用它。你將調用ensureAuthenticated，如果你的用戶沒有通過認證你將重定向到登錄頁面，*routes.js*：
+
+```
+function ensureAuthenticated(req, res, next) {
+    // 一個Passport提供的函數
+    if (req.isAuthenticated()) {
+        next();
+    } else {
+        req.flash('info', 'You must be logged in to see this page.')
+        res.redirect('/login');
+    }
+}
+```
+
+現在你將利用這個中間件來創建個人信息編輯頁。
+
+當你GET請求這個編輯葉，你僅僅只是渲染視圖，但是你想要確保做這件事之前用戶已經被身份認證。你唯一要做的事就是將ensureAuthenticated傳入到你的路由，然後它就可以正常工作了。
+
+```
+// 確保用戶被身份認證；如果它們沒有被重定向的話則運行你的請求處理
+router.get('/edit', ensureAuthenticated, (req, res) => {
+    res.render('edit');
+});
+```
+
+*edit.ejs*：
+
+```
+<% include _header %>
+
+<h1>Edit your profile</h1>
+
+<form action="/edit" method="post">
+    <input name="displayname" type="text" class="form-control" placeholder="Display name" value="<%= currentUser.displayName || "" %>">
+    <textarea name="bio" class="form-control" placeholder="Tell us about yourself!"><%= currentUser.bio %></textarea>
+    <input type="submit" value="Update" class="btn btn-primary btn-block">
+</form>
+
+<% include _footer %>
+```
+
+現在，處理表單的POST處理程序，這同樣要通過ensureAuthenticated確保身份認證：
+
+```
+router.post('/edit', ensureAuthenticated, (req, res, next) => {
+    req.user.displayName = req.body.displayName;
+    req.user.bio = req.body.bio;
+    req.user.save((err) => {
+        if (err) return next(err);
+        req.flash('info', 'Profile updated!');
+        res.redirect('/edit');
+    });
+});
+```
+
+## 總結
+
+Mongo是一個可以讓你儲存任意數量文檔的的資料庫。
+
+Mongoose是一個Mongo官方提供的Node庫。它可以很好的配合Express。
+
+為了安全的創建user帳戶，你需要確保你不會直接儲存密碼。你將使用到bcrypt模組來做這點。
+
+你將使用Passport來對user進行身份認證，在它們真正進行操作前確保他們已經是登陸狀態。

@@ -1,0 +1,17 @@
+<% include _header %>
+
+<!--
+參考變數currentUser來判斷你的登錄狀態。不過現在它總會是false狀態
+-->
+<% if ((currentUser) && (currentUser.id === user.id)) { %>
+<a href="/edit" class="pull-right">Edit your profile</a>
+<% } %>
+
+<h1><%= user.name() %></h1>
+<h2>Joined on <%= user.createdAt %></h2>
+
+<% if (user.bio) { %>
+<p><%= user.bio %></p>
+<% } %>
+
+<% include _footer %>

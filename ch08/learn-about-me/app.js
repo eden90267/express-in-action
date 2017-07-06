@@ -9,13 +9,17 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const flash = require('connect-flash');
+const passport = require('passport');
 
+const setUpPassport = require('./setuppassport');
 // 把你的路由放到另一個文件
 const routes = require('./routes');
 
 const app = express();
 
 mongoose.connect(require('./credentials').mongo.connectionString);
+
+setUpPassport();
 
 app.set("port", process.env.PORT || 3000);
 
@@ -26,11 +30,15 @@ app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(session({
+    // 需要一串隨機字母序列
     secret: 'TKRv0IJs=HYqrvagQ#&!F!%V]Ww/4KiVs$s,<<MX',
     resave: true,
     saveUninitialized: true
 }));
 app.use(flash());
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use(routes);
 
