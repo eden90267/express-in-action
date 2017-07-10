@@ -1,0 +1,16 @@
+{
+  "name": "heroku-test",
+  "private": true,
+  "scripts": {
+    "start": "node app",
+    "production": "forever app.js",
+    "postinstall": "grunt build"
+  },
+  "dependencies": {
+    "express": "^4.15.3",
+    "forever": "^0.15.3"
+  },
+  "engines": {
+    "node": "7.10.0"
+  }
+}

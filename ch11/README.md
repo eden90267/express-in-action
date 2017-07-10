@@ -578,5 +578,283 @@ module.exports = (grunt) => {
 - grunt-contrib-imagemin：壓縮圖片。如果你想節省商標寬度，這是個好工具。
 - grunt-contrib-coffee：讓你可在客戶端用CoffeeScript來取代Javascript。
 
-## 使用Connect-asserts來編譯LESS和CoffeeScript
+## 使用Connect-assets來編譯LESS和CoffeeScript
 
+grunt流行又強有力，但代碼有點冗長並且難懂。對Express用戶來說還有一個別的選擇：一個叫做connect-assets的中間件([https://github.com/adunkman/connect-assets](https://github.com/adunkman/connect-assets))。
+
+connect-assets可以進行連接，編譯，以及壓縮Javascript和CSS的操作。它支持CoffeeScript、Stylus、LESS、SASS、甚至是EJS。但並不支持Browserify，同時也不支持像Grunt或Gulp這樣的構建工具的配置，但它卻十分易用。
+
+connect-asset是受Ruby on Rails的Sprockets資源管道啟發的。
+
+>Connect是另一個簡短的Node框架，Express中間件同樣適用於Connect的中間件。很多適用於Express的中間件在connect-assets中同樣適用於Connect。
+
+### 著手安裝所有東西
+
+`npm i connect-assets --save`以及任何其他你需要的編譯器：
+
+- coffee-script
+- stylus
+- less
+- node-sass
+- ejs
+- uglify-js
+- csswring
+
+最後兩個默認情況下是用於生產環境而不是開發環境。如果你沒有改變默認選項或忘記安裝它們，你的app就會在生產環境環節中出錯。確保你已經安裝了它們！運行`npm i less --save`安裝LESS。
+
+你還需要選擇一個目錄來存放資源。default，connect-assets將會在assets/css中查找CSS相關資源，在assets/js中查找Javascript相關資源，不過這是可配置的。推薦default配置。所以新建該目錄。
+
+### 設置中間件
+
+中間件的快速啟動選項可以讓其被快速的構建，我強烈推薦此項。例如，其中一個配置選項可以讓connect-assets避免污染全局命名空間，而且這個選項是默認的：
+
+```
+const express = require('express');
+const assets = require('connect-assets');
+
+const app = express();
+
+app.use(assets({
+    helperContext: app.locals,
+    // 指定你使用的資源路徑。順序很重要——如果main.js存在於多個目錄中，只有第一個目錄中的會變編譯
+    paths: ['assets/css', 'assets/js']
+}));
+```
+
+這個中間件有很多合理的default值。例如，它允許在生產環境中壓縮但在開發環境中禁止它們。你可重寫這個配置。我們只重寫helperContext這個默認值。默認情況下，connect-assets會在全局對象上添加輔助對象。取而代之的是，我們會把它們附加到app.locals上，從而避免對全局命名空間的污染，與此同時在視圖中仍可以訪問到輔助對象。
+
+現在中間件設置好了，你將需要把它們的資源關聯到視圖中。
+
+### 在視圖中關聯資源
+
+connect-assets為你的視圖提供了兩個主要的輔助參數：js和css。js('myfile')將會生成一個`<script>`標籤來引入myfile。css輔助函數`<link>`標籤為CSS做同樣的事。它們會返回一個包含你最新資源版本的HTML，這屆意味著他們會在名字後面添加一串很長的hash串，從而確保你的browser不會使用已經緩存的老資源。
+
+Pug渲染視圖，你會像下面這樣引入他們到你的視圖中：
+
+```
+!= css('my-css-file')
+!= js('my-javascript-file')
+```
+
+EJS：
+
+```
+<%- css('my-css-file') ->
+<%- js('my-javascript-file') ->
+```
+
+如果你使用的識別的視圖引擎，你需要確保不會對HTML進行轉碼，因這些輔助函數生成的是不需轉碼的原生HTML標記。它們生成的標記大概是這樣：
+
+```
+<link rel="stylesheet" href="/assets/my-css-file-{{SOME LONG HASH}}.css">
+<script src="/assets/my-javascript-file-{{SOME LONG HASH}}.js>
+```
+
+與此同時你的資源也將會被加載！
+
+### 透過指令連接腳本
+
+你並不能透過這種方式來連接CSS文件。取而代之的是，你需要在你的CSS預處理器中使用`@import`語法。不過connect-assets使你可以通過特殊的格式化注釋來連接Javascript文件。
+
+假設你在Javascript文件中引入jQuery。你所需要做的只是//= require定義一個注釋，隨後connect-assets將會神奇地把這些資源連接到一起：
+
+```
+//= require jquery
+$(function() {
+  // do what you need to do with jQuery
+```
+
+這就是連接，相當的簡單。
+
+既然我們找到了兩種連接資源的方式，那麼讓我們來看看怎麼將你的應用程序透過Heroku部署到真實的網絡環境中。
+
+## 部署到Heroku
+
+選擇它是因為他相當簡單且一開始不用花費任何東西。
+
+### 開始設置Heroku
+
+註冊Heroku帳號。
+
+接下來，你從[https://toolbelt.heroku.com/](https://toolbelt.heroku.com/)下載並安裝Heroku工具鏈。Heroku工具鏈需安裝這三個東西：
+
+- Heroku client：用於管理Heroku app的命令行工具，你需要用它來創建並管理你的Express app。
+- Foreman：另一個命令行工具。你將需要用它來定義你的應用程序是如何運行的。
+- Git
+
+利用Heroku來認證你的電腦，打開command line tool輸入`heroku login`。這將會請求你的帳密。
+
+一旦你都做了，Heroku就已經被設置好了。
+
+### 製作一個Heroku預備app
+
+我們編寫一個簡單的Hello World應用程序並把它部署到Heroku。
+
+你並不需要為了將你的app部署到Heroku而做太多跟平時不同的工作。儘管你需要在命令行中運行一些指令來進行部署，你所需要做的改變是：
+
+- 確保你的app啟動在process.env.PORT
+- 確保你的package.json中列有一個Node版本
+- 創建一個用於在Heroku啟動你app的時候運行的文本(稱之為Procfile)。在我們簡單的app中，這個文件只有一行代碼
+- 為你的項目添加一個.gitignore文件
+
+現在創建一個鏈的app並確保你完成了這些事情。
+
+首先，定義*package.json*：
+
+```
+{
+  "name": "heroku-test",
+  "private": true,
+  "scripts": {
+    "start": "node app"
+  },
+  "dependencies": {
+    "express": "^4.15.3"
+  },
+  "engines": {
+    "node": "7.10.0"
+  }
+}
+```
+
+定義*app.js*：
+
+```
+const express = require('express');
+
+const app = express();
+
+app.set('port', process.env.PORT || 3000);
+
+app.get('/', (req, res) => {
+    res.send('Hello world!');
+});
+
+app.listen(app.get('port'), () =>
+    console.log('App started on port ' + app.get('port'))
+);
+```
+
+Heroku會指定設置端口。從而讓你可透過process.env.PORT來獲取。
+
+再來是*Procfile*。Procfile將編寫這些並告訴Heroku在你app啟動的時候運行npm start：
+
+```
+web: npm start
+```
+
+再來是添加一個*.gitignore*文件來結束最後一步。
+
+```
+node_modules
+```
+
+現在你的應用程序已經一切就緒，你可以開始部署它了。
+
+### 部署你的第一個app
+
+另開一個heroku-test專案，將上述文件複製到該專案。再來輸入如下git指令：
+
+```
+git init
+git add .
+git commit -m "Initial commit"
+```
+
+```
+heroku create
+```
+
+它會為你的Heroku app設置一個新的URL。這是免費的虛擬主機。你可以改變它的URL或者給Heroku地址綁定一個自己的域名。
+
+接下來要告知Heroku這是一個Node的生產環境。你可透過在Heroku server設置NODE_ENV環境變數來解決這問題：
+
+```
+heroku config:set NODE_ENV=production
+```
+
+在你之前運行heroku create的時候，Heroku已經添加了一個遠程git服務。當你把代碼推送到Heroku的時候，Heroku將會部署你的app(如果先前已部署的話，那麼就會重新進行部署)：
+
+```
+git push heroku master
+```
+
+這是你第一次把代碼提交到Heroku server，然後用你自己的依賴項來設置Server。你將在每次重新部署的時候運行git push heroku master；這是唯一需要你多次運行的命令。
+
+還有最後一件事情要做，——告訴Heroku需要一個進程來運行你的app，從而使其可以正在電腦中運行：
+
+```
+heroku ps:scale web=1
+```
+
+再來輸入
+
+```
+heroku open
+```
+
+在你的瀏覽器中打開你的app，即可看到執行結果。
+
+#### 在Heroku運行Grunt
+
+connect-assets就不需做任何事。但如果你使用Grunt，你就需要在部署站點的時候運行Grunt來構建你的資源。
+
+有一個小技巧可以讓它開始工作，就是利用npm的一個特性：postinstall腳本。Heroku會在你部署app的時候運行npm install，與此同時，你可以告訴Heroku隨後去運行Grunt從而構建你所有資源。為你的package.json添加腳本是一個簡單方式：
+
+```
+// ...
+"scripts": {
+    // ...
+    "postinstall": "grunt build"
+},
+// ...
+```
+
+現在，當任何人(包括Heroku)運行npm install的時候，grunt build就會被運行。
+
+### 使你的server更加的耐崩潰
+
+你將把`node app.js`替換為`forever app.js`。
+
+首先，運行`npm install forever --save`。
+
+再來聽加到Procfile或改變你的npm start腳本，但我更喜歡在package.json添加新的腳本：
+
+```
+// ...
+"scripts": {
+    // ...
+    "production": "forever app.js"
+},
+// ...
+```
+
+Procfile：
+
+```
+web: npm run production
+```
+
+修改完畢之後，Heroku將會用Forever運行你的app，並會在你app崩壞後重新啟動。
+
+一如既往的利用Heroku將這些改變提交到Git。
+
+```
+git add .
+git commit -m "modify start to forever"
+git push heroku master
+```
+
+你可在任何類型的部署中都適用Forever，並不僅僅是Heroku而已。很多的部署設置將會隨著你的server的設置而改變，不過你卻可以選擇使用Forever來部署在任何地方。
+
+## 總結
+
+LESS是CSS編程語言。它添加了很多像變數和mixins這樣的特性。
+
+Browserify是browser中的javascript打包工具。它將文件進行打包，從而使用你可以在browser中使用Node.js模組系統，它允許你在前後端進行代碼復用。
+
+Grunt是一個可以做很多事情的通用任務運行器。你可以透過Grunt，讓LESS來編譯CSS以及讓Browserify來打包Javascript。
+
+connect-assets是Grunt的一個替代方式，它允許你透過使用Express中間件來編譯CSS和Javascript。
+
+Heroku是很多雲平台的一種，它使你可以輕鬆的部署Express應用程序到現實網絡中。
