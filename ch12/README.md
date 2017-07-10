@@ -50,3 +50,10 @@
 一個查看這種文件組織方式優勢的最後方法就是，使用官方的Express應用程序生成器，你可利用npm i -g express-generator來進行安裝。一旦你安裝了她，你就可以運行express my-new-app，它就會創建一個my-express-app文件夾並在裡面設置app骨架。
 
 這樣的模式和慣例會很常見。
+
+## 鎖定依賴項版本
+
+默認情況下，當你用npm install --save安裝一個包的時候，
+
+
+![](http://i.imgur.com/Th8NyeI.png)
