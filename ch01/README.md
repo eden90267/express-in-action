@@ -2,7 +2,7 @@
 
 Node.js ─ JavaScript運行環境。但它原生API十分基礎，很多時候僅靠原生API開發會顯得很無力，所以你需要寫一些模板來對這些API進行封裝，這時候Express誕生了。利用Express你可以輕鬆編寫Node.js web應用程序。
 
->Node.js：一個流行在web Server的JavaScript運行平台
+>Node.js：一個流行在web Server的JavaScript運行平台  
 >Express：一個致力於用Node.js來進行web開發的框架，使用它可以讓你更輕鬆的利用
 
 Node.js誕生2009年。Node.js基於Google Browser的V8引擎，從瀏覽器脫離出來獨立的運行在Server端。所以現在Server端同樣也能把JavaScript作為後端語言使用了。
